@@ -1,0 +1,2 @@
+# snoopybot
+Snoopy twitter bot
