@@ -6,8 +6,9 @@ var app = express();
 // Twitter & redis cache credentials
 var config = require('./config.js');
 var Twitter = new Twit(config);
-var cache = redis.createClient(6380, config.cache.servername, {auth_pass: config.cache.redis_auth_pass, tls: {servername: config.cache.redis_servername}});
+var cache = redis.createClient(6380, config.cache.redis_servername, {auth_pass: config.cache.redis_auth_pass, tls: {servername: config.cache.redis_servername}});
 
+// Snoopy's novels 
 var novel = [
   'It was a dark and stormy night.',
   'Suddenly, a shot rang out! A door slammed. The maid screamed.',
@@ -34,6 +35,7 @@ var novel = [
   'Now, when I go away, you shall know that I am leaving you with Great Reluctance!" She hit him with a waffle iron.'
 ];
 
+// Miscellanous quotes and writings
 var misc = [
   "Here's the world-famous author waiting for word from his publisher...",
   "Sometimes, when you are a great writer, the words come so fast you can hardly put them down on paper...",
@@ -65,31 +67,37 @@ function doWork() {
   var die = Math.floor((Math.random() * 2)); 
 
   switch(die) {
+
+    // Tweet next sentence in the novel
     case 0:
       // Retrieve last novel index from cache
       cache.get('sbNovelIndex',  function(err, index) {
 
-        // Increment index 
+        // Increment index and store in cache
         if (++index == novel.length)
           index=0;
 
         cache.set('sbNovelIndex', index, redis.print);
         
+        // Tweet sentence
         console.log('Tweeting novel index:' + index);
         tweet = sendTweet(novel[index]); 
       });
       break;
+
+    // Tweet random quote
     case 1:
       var range = misc.length-1;
       var phrase = Math.floor((Math.random() * range) + 1);
       
-      console.log('Tweeting misc index:' + phrase);
+      console.log('Tweeting miscellaneous quote index:' + phrase);
       tweet = sendTweet(misc[phrase]);
       break;
   }
   return tweet;
 }
 
+// Call Twitter API to update status (Tweet)
 function sendTweet(tweet) {
 
   Twitter.post('statuses/update', { status: tweet}, function(error, tweetResponse, response){
@@ -106,13 +114,14 @@ function sendTweet(tweet) {
   return tweet;
 }
 
+// Send direct message to Pat if error
 function tweetPat(error)
 {
   // send error to Pat
   for (var i = 0; i < error.length; i++) 
   {
-    lastError = {status: '@PatAltimore ' + error[i].code + ': ' + error[i].message};
-    Twitter.post('statuses/update', lastError,  function(error, tweetResponse, response){
+    lastError = error[i].code + ': ' + error[i].message;
+    Twitter.post('direct_messages/new', { screen_name: '@PatAltimore', text: lastError }, function(error, tweetResponse, response) {
       if(error){
         console.log(error);
       }
@@ -121,16 +130,13 @@ function tweetPat(error)
   }
 }
 
+// Return "Hello" message if request to website
 app.get('/', function (req, res) {
   res.send('<h1>Hello, I\'m the Snoopy twitter bot.</h1>');
 })
 
-/* app.get('/tweet', function (req, res) {
-  var tweet = '<h1>Snoopy just tweeted</h1>';
-  doWork();
-  res.send(tweet);
-}) */
 
+// Return last action status for /status resource
 app.get('/status', function (req, res) {
 
   cache.get('sbLastAction',  function(err, reply) {
@@ -141,6 +147,13 @@ app.get('/status', function (req, res) {
       });
 })
 
+// Force tweet
+/* app.get('/tweet', function (req, res) {
+  var tweet = '<h1>Snoopy just tweeted</h1>';
+  doWork();
+  res.send(tweet);
+}) */
+
 // If followed, reply back to follower and follow them back
 function followed(event) {
   var name = event.source.name;
@@ -150,6 +163,7 @@ function followed(event) {
   {
     console.log('Followed by: ' + name + ' ' + screenName); 
 
+    // direct message back to follower 
     var tweet = 'Happiness is being followed. ❤️';
 
     Twitter.post('direct_messages/new', { screen_name: screenName, text: tweet }, function(error, tweetResponse, response){
@@ -159,6 +173,7 @@ function followed(event) {
       }
     }); 
 
+    // Follow them back
     Twitter.post('friendships/create', { screen_name: screenName}, function(error, tweetResponse, response){
       if(error){
         tweetPat(error);
@@ -172,5 +187,5 @@ function followed(event) {
 var stream = Twitter.stream('user');
 stream.on('follow', followed);
 
-// For website, listen on port
+// Listen on port
 app.listen(process.env.PORT || 8080);
