@@ -5,9 +5,7 @@ var app = express();
 
 // Twitter & redis cache credentials
 var config = require('./config.js');
-
 var Twitter = new Twit(config);
-
 var cache = redis.createClient(6380, config.cache.servername, {auth_pass: config.cache.redis_auth_pass, tls: {servername: config.cache.redis_servername}});
 
 var novel = [
