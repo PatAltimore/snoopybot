@@ -51,10 +51,6 @@ var misc = [
   "Here I am on the way to my first autograph party. I hate it when the line doesn't extend clear around the block.",
   "Autograph parties are terrible when nobody shows up.",
   "What I need is a unique signature. 🐾",
-  "It was a dark and stormy night. Suddenly, a kiss rang out!",
-  "It was a dark and stormy night. Suddenly, a vote rang out!",
-  "It was a dark and stormy night. Suddenly, a turkey rang out!",
-  "Once upon a time...It was a dark and stormy night.",
   "It was a dark and stormy night. Suddenly, out of the mist a spooky figure appeared. How spooky was he? Spoooooooky!",
   "I have the perfect title... \"Has It Ever Occurred to You That You Might Be Wrong?\""
   ];
@@ -74,7 +70,7 @@ function doWork() {
       cache.get('sbNovelIndex',  function(err, index) {
 
         // Increment index and store in cache
-        if (++index == novel.length)
+        if (index++ == novel.length-1)
           index=0;
 
         cache.set('sbNovelIndex', index, redis.print);
