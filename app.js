@@ -1,14 +1,34 @@
 var Twit = require('twit');
-var redis = require('redis');
-var express = require('express');
-var app = express();
+var storage = require('azure-storage');
 
-// Twitter & redis cache credentials
+// Twitter credentials
 var config = require('./config.js');
-var Twitter = new Twit(config);
-var cache = redis.createClient(6380, config.cache.redis_servername, {auth_pass: config.cache.redis_auth_pass, tls: {servername: config.cache.redis_servername}});
 
-// Snoopy's novels 
+var Twitter = new Twit(config);
+
+// Create table
+var tableSvc = storage.createTableService(config.storage.AZURE_STORAGE_ACCOUNT, config.storage.AZURE_STORAGE_ACCESS_KEY);
+
+tableSvc.createTableIfNotExists('state', function(error, result, response) {
+  if(!error){
+    
+    // If the table is new, add an entry for novel state
+    if (result.created) {
+      var entGen = storage.TableUtilities.entityGenerator;
+      var state = {
+        PartitionKey: entGen.String('state'),
+        RowKey: entGen.String('novel'),
+        index: entGen.Int32(0)
+      }
+      tableSvc.insertEntity('state', state, function(error, result, response) {
+        if(!error) {
+          console.log('Storage table and initial entry created');
+        }
+      })
+    }
+  }
+})
+
 var novel = [
   'It was a dark and stormy night.',
   'Suddenly, a shot rang out! A door slammed. The maid screamed.',
@@ -35,7 +55,6 @@ var novel = [
   'Now, when I go away, you shall know that I am leaving you with Great Reluctance!" She hit him with a waffle iron.'
 ];
 
-// Miscellanous quotes and writings
 var misc = [
   "Here's the world-famous author waiting for word from his publisher...",
   "Sometimes, when you are a great writer, the words come so fast you can hardly put them down on paper...",
@@ -55,133 +74,85 @@ var misc = [
   "I have the perfect title... \"Has It Ever Occurred to You That You Might Be Wrong?\""
   ];
 
-function doWork() {
+  function doWork() {
 
-  var tweet, index;
-
-  // roll a die and determine what Snoopy should tweet.
-  var die = Math.floor((Math.random() * 2)); 
-
-  switch(die) {
-
-    // Tweet next sentence in the novel
-    case 0:
-      // Retrieve last novel index from cache
-      cache.get('sbNovelIndex',  function(err, index) {
-
-        // Increment index and store in cache
-        if (index++ == novel.length-1)
-          index=0;
-
-        cache.set('sbNovelIndex', index, redis.print);
+    var tweet, index=0;
+  
+    // roll a die and determine what Snoopy should tweet.
+    var die = Math.floor((Math.random() * 2)); 
+  
+    switch(die) {
+  
+      // Tweet next sentence in the novel
+      case 0:
+        // Retrieve last novel index from storage table
+        tableSvc.retrieveEntity('state', 'state', 'novel', function(error, state, response) {
+          if(!error){
+            index = state.index._;
+          }
+          // Increment index
+          index = index + 1;
+          if (index > novel.length-1)
+            index=0;
+  
+          // Update storage table with new index
+          state.index._ = index;
+  
+          tableSvc.replaceEntity('state', state, function(error, result, response) {
+            if(!error) {
+              // entity updated
+            }
+          })
+  
+          // Tweet sentence
+          console.log('Tweeting novel index:' + index);
+          sendTweet(novel[index]); 
+        });
+        break;
+  
+      // Tweet random quote
+      case 1:
+        var range = misc.length-1;
+        var phrase = Math.floor((Math.random() * range) + 1);
         
-        // Tweet sentence
-        console.log('Tweeting novel index:' + index);
-        tweet = sendTweet(novel[index]); 
-      });
-      break;
-
-    // Tweet random quote
-    case 1:
-      var range = misc.length-1;
-      var phrase = Math.floor((Math.random() * range) + 1);
-      
-      console.log('Tweeting miscellaneous quote index:' + phrase);
-      tweet = sendTweet(misc[phrase]);
-      break;
-  }
-  return tweet;
-}
-
-// Call Twitter API to update status (Tweet)
-function sendTweet(tweet) {
-
-  Twitter.post('statuses/update', { status: tweet}, function(error, tweetResponse, response){
-    if(error){
-      tweetPat(error);
-      console.log(error);
+        console.log('Tweeting miscellaneous quote index:' + phrase);
+        sendTweet(misc[phrase]);
+        break;
     }
-  }); 
-
-  // Save last tweet to cache
-  cache.set('sbLastAction', tweet, redis.print);
-
-  console.log(tweet);
-  return tweet;
-}
-
-// Send direct message to Pat if error
-function tweetPat(error)
-{
-  // send error to Pat
-  for (var i = 0; i < error.length; i++) 
-  {
-    lastError = error[i].code + ': ' + error[i].message;
-    Twitter.post('direct_messages/new', { screen_name: '@PatAltimore', text: lastError }, function(error, tweetResponse, response) {
+  }
+  
+  // Call Twitter API to update status (Tweet)
+  function sendTweet(tweet) {
+  
+     Twitter.post('statuses/update', { status: tweet}, function(error, tweetResponse, response){
       if(error){
+        tweetPat(error);
         console.log(error);
       }
-    });
-    cache.set('sbLastAction', error[i].message, redis.print);
+    }); 
+  
+    console.log(tweet);
   }
-}
-
-// Return "Hello" message if request to website
-app.get('/', function (req, res) {
-  res.send('<h1>Hello, I\'m the Snoopy twitter bot.</h1>');
-})
-
-
-// Return last action status for /status resource
-app.get('/status', function (req, res) {
-
-  cache.get('sbLastAction',  function(err, reply) {
-        status = '<h1>Snoopy twitter bot status</h1>';
-        status += 'Last action: ' + reply;
-
-        res.send(status);
+  
+  // Send direct message to Pat if error
+  function tweetPat(error)
+  {
+    // send error to Pat
+    for (var i = 0; i < error.length; i++) 
+    {
+      lastError = error[i].code + ': ' + error[i].message;
+      Twitter.post('direct_messages/new', { screen_name: '@PatAltimore', text: lastError }, function(error, tweetResponse, response) {
+        if(error){
+          console.log(error);
+        }
       });
-})
-
-// Force tweet
-/* app.get('/tweet', function (req, res) {
-  var tweet = '<h1>Snoopy just tweeted</h1>';
-  doWork();
-  res.send(tweet);
-}) */
-
-// If followed, reply back to follower and follow them back
-function followed(event) {
-  var name = event.source.name;
-  var screenName = event.source.screen_name;
-
-  if (screenName !== "SnoopyAtWork") // Don't follow yourself
-  {
-    console.log('Followed by: ' + name + ' ' + screenName); 
-
-    // direct message back to follower 
-    var tweet = 'Happiness is being followed. ❤️';
-
-    Twitter.post('direct_messages/new', { screen_name: screenName, text: tweet }, function(error, tweetResponse, response){
-      if(error){
-        tweetPat(error);
-        console.log(error);
-      }
-    }); 
-
-    // Follow them back
-    Twitter.post('friendships/create', { screen_name: screenName}, function(error, tweetResponse, response){
-      if(error){
-        tweetPat(error);
-        console.log(error);
-      }
-    }); 
+    }
   }
-}
 
-// If set up user stream, listen for followers...
-var stream = Twitter.stream('user');
-stream.on('follow', followed);
+// For webjob, tweet and exit
+doWork();
 
-// Listen on port
-app.listen(process.env.PORT || 8080);
+// Exit after 20 seconds
+setTimeout(function () {
+    process.exit();
+}, 20000);
