@@ -7,7 +7,7 @@ module.exports = {
   access_token_secret:  ''
 }
 
-module.exports.cache = {
-  redis_auth_pass:            '',
-  redis_servername:           ''
+module.exports.storage = {
+  AZURE_STORAGE_ACCOUNT:  '',
+  AZURE_STORAGE_ACCESS_KEY: ''
 }
