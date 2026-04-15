@@ -1,0 +1,16 @@
+name: snoopybot
+metadata:
+  template: snoopybot@0.0.1
+
+infra:
+  provider: bicep
+  path: infra
+
+hooks:
+  postprovision:
+    posix:
+      shell: sh
+      run: infra/scripts/postprovision.sh
+    windows:
+      shell: pwsh
+      run: infra/scripts/postprovision.ps1
