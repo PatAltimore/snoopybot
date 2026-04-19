@@ -21,10 +21,10 @@ func main() {
 
 	// At least one posting platform must be configured.
 	mastodonOK := os.Getenv("MASTODON_SERVER") != "" && os.Getenv("MASTODON_ACCESS_TOKEN") != ""
-	threadsOK := os.Getenv("THREADS_USER_ID") != "" && os.Getenv("THREADS_ACCESS_TOKEN") != ""
-	if !mastodonOK && !threadsOK {
+	// threadsOK := os.Getenv("THREADS_USER_ID") != "" && os.Getenv("THREADS_ACCESS_TOKEN") != "" // re-enable for Threads
+	if !mastodonOK { // add `&& !threadsOK` when Threads is re-enabled
 		log.Fatal("at least one posting platform must be configured: " +
-			"set MASTODON_SERVER + MASTODON_ACCESS_TOKEN, or THREADS_USER_ID + THREADS_ACCESS_TOKEN")
+			"set MASTODON_SERVER + MASTODON_ACCESS_TOKEN")
 	}
 
 	log.Println("Snoopy is writing...")

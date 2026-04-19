@@ -10,7 +10,7 @@ import (
 
 	"github.com/PatAltimore/snoopybot/internal/mastodon"
 	"github.com/PatAltimore/snoopybot/internal/storage"
-	"github.com/PatAltimore/snoopybot/internal/threads"
+	// "github.com/PatAltimore/snoopybot/internal/threads" // re-enable to post to Threads
 )
 
 // poster is satisfied by any platform client (Mastodon, Threads, etc.)
@@ -31,12 +31,13 @@ func DoWork() error {
 			AccessToken: os.Getenv("MASTODON_ACCESS_TOKEN"),
 		})
 	}
-	if userID := os.Getenv("THREADS_USER_ID"); userID != "" {
-		posters = append(posters, &threads.Client{
-			UserID:      userID,
-			AccessToken: os.Getenv("THREADS_ACCESS_TOKEN"),
-		})
-	}
+	// Threads — uncomment to re-enable:
+	// if userID := os.Getenv("THREADS_USER_ID"); userID != "" {
+	// 	posters = append(posters, &threads.Client{
+	// 		UserID:      userID,
+	// 		AccessToken: os.Getenv("THREADS_ACCESS_TOKEN"),
+	// 	})
+	// }
 
 	// Select content
 	stateClient, err := storage.NewStateClient(
