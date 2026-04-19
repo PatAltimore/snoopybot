@@ -17,6 +17,8 @@ type Client struct {
 	AccessToken string
 }
 
+func (c *Client) Name() string { return "Mastodon" }
+
 func (c *Client) PostStatus(ctx context.Context, text string) error {
 	url := c.Server + "/api/v1/statuses"
 

@@ -12,16 +12,19 @@ func main() {
 	// Load .env if present. Silently ignored in production where no .env exists.
 	_ = godotenv.Load()
 
-	required := []string{
-		"MASTODON_SERVER",
-		"MASTODON_ACCESS_TOKEN",
-		"AZURE_STORAGE_ACCOUNT",
-		"AZURE_STORAGE_ACCESS_KEY",
-	}
-	for _, k := range required {
+	// Azure storage is always required.
+	for _, k := range []string{"AZURE_STORAGE_ACCOUNT", "AZURE_STORAGE_ACCESS_KEY"} {
 		if os.Getenv(k) == "" {
 			log.Fatalf("missing required env var: %s", k)
 		}
+	}
+
+	// At least one posting platform must be configured.
+	mastodonOK := os.Getenv("MASTODON_SERVER") != "" && os.Getenv("MASTODON_ACCESS_TOKEN") != ""
+	threadsOK := os.Getenv("THREADS_USER_ID") != "" && os.Getenv("THREADS_ACCESS_TOKEN") != ""
+	if !mastodonOK && !threadsOK {
+		log.Fatal("at least one posting platform must be configured: " +
+			"set MASTODON_SERVER + MASTODON_ACCESS_TOKEN, or THREADS_USER_ID + THREADS_ACCESS_TOKEN")
 	}
 
 	log.Println("Snoopy is writing...")

@@ -9,10 +9,15 @@ param containerRegistryUsername string
 @secure()
 param containerRegistryPassword string
 
-param mastodonServer string
+param mastodonServer string = ''
 
 @secure()
-param mastodonAccessToken string
+param mastodonAccessToken string = ''
+
+param threadsUserId string = ''
+
+@secure()
+param threadsAccessToken string = ''
 
 // ── Storage Account ───────────────────────────────────────────────────────────
 // Hosts the 'state' table that tracks the novel line index.
@@ -58,6 +63,31 @@ resource containerAppsEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
   }
 }
 
+// ── Secrets & env vars built conditionally per platform ───────────────────────
+var baseSecrets = [
+  { name: 'azure-storage-key', value: storageAccount.listKeys().keys[0].value }
+  { name: 'registry-password', value: containerRegistryPassword }
+]
+var mastodonSecrets = mastodonAccessToken != '' ? [
+  { name: 'mastodon-access-token', value: mastodonAccessToken }
+] : []
+var threadsSecrets = threadsAccessToken != '' ? [
+  { name: 'threads-access-token', value: threadsAccessToken }
+] : []
+
+var baseEnvVars = [
+  { name: 'AZURE_STORAGE_ACCOUNT', value: storageAccount.name }
+  { name: 'AZURE_STORAGE_ACCESS_KEY', secretRef: 'azure-storage-key' }
+]
+var mastodonEnvVars = mastodonServer != '' ? [
+  { name: 'MASTODON_SERVER', value: mastodonServer }
+  { name: 'MASTODON_ACCESS_TOKEN', secretRef: 'mastodon-access-token' }
+] : []
+var threadsEnvVars = threadsUserId != '' ? [
+  { name: 'THREADS_USER_ID', value: threadsUserId }
+  { name: 'THREADS_ACCESS_TOKEN', secretRef: 'threads-access-token' }
+] : []
+
 // ── Container Apps Job ────────────────────────────────────────────────────────
 // Scheduled job: runs daily at 5:00 PM UTC.
 // The 'azd-service-name' tag lets azd update the image on `azd deploy`.
@@ -75,11 +105,7 @@ resource containerAppsJob 'Microsoft.App/jobs@2024-03-01' = {
         parallelism: 1
         replicaCompletionCount: 1
       }
-      secrets: [
-        { name: 'mastodon-access-token', value: mastodonAccessToken }
-        { name: 'azure-storage-key', value: storageAccount.listKeys().keys[0].value }
-        { name: 'registry-password', value: containerRegistryPassword }
-      ]
+      secrets: concat(baseSecrets, mastodonSecrets, threadsSecrets)
       registries: [
         {
           server: containerRegistryLoginServer
@@ -97,12 +123,7 @@ resource containerAppsJob 'Microsoft.App/jobs@2024-03-01' = {
             cpu: json('0.25')
             memory: '0.5Gi'
           }
-          env: [
-            { name: 'MASTODON_SERVER', value: mastodonServer }
-            { name: 'MASTODON_ACCESS_TOKEN', secretRef: 'mastodon-access-token' }
-            { name: 'AZURE_STORAGE_ACCOUNT', value: storageAccount.name }
-            { name: 'AZURE_STORAGE_ACCESS_KEY', secretRef: 'azure-storage-key' }
-          ]
+          env: concat(baseEnvVars, mastodonEnvVars, threadsEnvVars)
         }
       ]
     }

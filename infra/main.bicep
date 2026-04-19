@@ -19,12 +19,21 @@ param containerRegistryUsername string
 @secure()
 param containerRegistryPassword string
 
-@description('Mastodon instance URL (e.g. https://mastodon.social).')
-param mastodonServer string
+// ── Mastodon (optional) ───────────────────────────────────────────────────────
+@description('Mastodon instance URL (e.g. https://mastodon.social). Leave empty to disable.')
+param mastodonServer string = ''
 
 @description('Mastodon access token with write:statuses scope.')
 @secure()
-param mastodonAccessToken string
+param mastodonAccessToken string = ''
+
+// ── Threads (optional) ────────────────────────────────────────────────────────
+@description('Threads user ID. Leave empty to disable.')
+param threadsUserId string = ''
+
+@description('Threads long-lived access token with threads_content_publish scope.')
+@secure()
+param threadsAccessToken string = ''
 
 // ── Naming ────────────────────────────────────────────────────────────────────
 var tags = { 'azd-env-name': environmentName }
@@ -52,6 +61,8 @@ module resources './resources.bicep' = {
     containerRegistryPassword: containerRegistryPassword
     mastodonServer: mastodonServer
     mastodonAccessToken: mastodonAccessToken
+    threadsUserId: threadsUserId
+    threadsAccessToken: threadsAccessToken
   }
 }
 
