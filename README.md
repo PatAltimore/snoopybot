@@ -1,8 +1,6 @@
 # snoopybot
 
-Twitter bot that tweets lines from Snoopy's novel and other writings from the Peanuts comic strip. Runs as an Azure Container Apps Job on a daily schedule.
-
-See [@SnoopyAtWork](https://twitter.com/SnoopyAtWork) on Twitter.
+Mastodon bot that posts lines from Snoopy's novel and other writings from the Peanuts comic strip. Runs as an Azure Container Apps Job on a daily schedule.
 
 ## Prerequisites
 
@@ -10,25 +8,21 @@ See [@SnoopyAtWork](https://twitter.com/SnoopyAtWork) on Twitter.
 - [Azure Developer CLI (azd)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)
 - [Docker](https://www.docker.com/products/docker-desktop/) (for building the container image)
 - An existing [Azure Container Registry](https://learn.microsoft.com/azure/container-registry/)
-- Twitter/X API credentials (OAuth 1.0a — consumer key/secret + access token/secret)
+- A Mastodon account and access token
 
 ## Local development
 
-Copy `.env` and fill in your credentials:
-
-```bash
-cp .env .env.local   # or just edit .env directly
-```
+Fill in your credentials in `.env`:
 
 | Variable | Description |
 |---|---|
-| `TWITTER_CONSUMER_KEY` | Twitter/X API consumer key |
-| `TWITTER_CONSUMER_SECRET` | Twitter/X API consumer secret |
-| `TWITTER_ACCESS_TOKEN` | Twitter/X access token |
-| `TWITTER_ACCESS_TOKEN_SECRET` | Twitter/X access token secret |
+| `MASTODON_SERVER` | Your Mastodon instance URL (e.g. `https://mastodon.social`) |
+| `MASTODON_ACCESS_TOKEN` | Access token with `write:statuses` scope |
 | `AZURE_STORAGE_ACCOUNT` | Azure Storage account name |
 | `AZURE_STORAGE_ACCESS_KEY` | Azure Storage account key |
-| `DRY_RUN` | Set to `true` to print the tweet without posting it |
+| `DRY_RUN` | Set to `true` to print the post without sending it |
+
+To get a Mastodon access token: go to your instance → **Preferences** → **Development** → **New Application** → enable the `write:statuses` scope → copy the access token.
 
 Run locally (dry run by default):
 
@@ -36,7 +30,7 @@ Run locally (dry run by default):
 go run .
 ```
 
-To fire a real tweet, remove `DRY_RUN=true` from `.env` (or set it to `false`) before running.
+To fire a real post, set `DRY_RUN=false` in `.env` before running.
 
 ## Project structure
 
@@ -45,9 +39,9 @@ main.go                            # Entry point: validates env vars, calls bot.
 internal/
   bot/
     data.go                        # Novel lines and miscellaneous quotes
-    bot.go                         # DoWork(): coin flip, tweet novel or misc quote
-  twitter/
-    client.go                      # Minimal OAuth1 Twitter API v2 client
+    bot.go                         # DoWork(): coin flip, post novel or misc quote
+  mastodon/
+    client.go                      # Mastodon API client (POST /api/v1/statuses)
   storage/
     state.go                       # Azure Tables: tracks current novel line index
 Dockerfile                         # Multi-stage build → scratch-based image (~8 MB)
@@ -78,11 +72,9 @@ azd env set AZURE_CONTAINER_REGISTRY_LOGIN_SERVER  <registry>.azurecr.io
 azd env set AZURE_CONTAINER_REGISTRY_USERNAME      <acr-admin-username>
 azd env set AZURE_CONTAINER_REGISTRY_PASSWORD      <acr-admin-password>
 
-# Twitter/X API credentials
-azd env set TWITTER_CONSUMER_KEY        <value>
-azd env set TWITTER_CONSUMER_SECRET     <value>
-azd env set TWITTER_ACCESS_TOKEN        <value>
-azd env set TWITTER_ACCESS_TOKEN_SECRET <value>
+# Mastodon credentials
+azd env set MASTODON_SERVER        https://mastodon.social
+azd env set MASTODON_ACCESS_TOKEN  <value>
 ```
 
 > ACR admin credentials are found in the Azure Portal under your registry → **Access keys**. Enable the admin user if it is not already on.
@@ -151,6 +143,6 @@ GitHub push → Actions workflow → docker build → ACR → Container Apps Job
                                             Azure Table Storage
                                             (tracks novel index)
                                                     │
-                                              Twitter/X API v2
-                                               (posts tweet)
+                                             Mastodon API v1
+                                              (posts status)
 ```

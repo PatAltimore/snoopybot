@@ -9,17 +9,10 @@ param containerRegistryUsername string
 @secure()
 param containerRegistryPassword string
 
-@secure()
-param twitterConsumerKey string
+param mastodonServer string
 
 @secure()
-param twitterConsumerSecret string
-
-@secure()
-param twitterAccessToken string
-
-@secure()
-param twitterAccessTokenSecret string
+param mastodonAccessToken string
 
 // ── Storage Account ───────────────────────────────────────────────────────────
 // Hosts the 'state' table that tracks the novel line index.
@@ -83,10 +76,7 @@ resource containerAppsJob 'Microsoft.App/jobs@2024-03-01' = {
         replicaCompletionCount: 1
       }
       secrets: [
-        { name: 'twitter-consumer-key', value: twitterConsumerKey }
-        { name: 'twitter-consumer-secret', value: twitterConsumerSecret }
-        { name: 'twitter-access-token', value: twitterAccessToken }
-        { name: 'twitter-access-token-secret', value: twitterAccessTokenSecret }
+        { name: 'mastodon-access-token', value: mastodonAccessToken }
         { name: 'azure-storage-key', value: storageAccount.listKeys().keys[0].value }
         { name: 'registry-password', value: containerRegistryPassword }
       ]
@@ -108,10 +98,8 @@ resource containerAppsJob 'Microsoft.App/jobs@2024-03-01' = {
             memory: '0.5Gi'
           }
           env: [
-            { name: 'TWITTER_CONSUMER_KEY', secretRef: 'twitter-consumer-key' }
-            { name: 'TWITTER_CONSUMER_SECRET', secretRef: 'twitter-consumer-secret' }
-            { name: 'TWITTER_ACCESS_TOKEN', secretRef: 'twitter-access-token' }
-            { name: 'TWITTER_ACCESS_TOKEN_SECRET', secretRef: 'twitter-access-token-secret' }
+            { name: 'MASTODON_SERVER', value: mastodonServer }
+            { name: 'MASTODON_ACCESS_TOKEN', secretRef: 'mastodon-access-token' }
             { name: 'AZURE_STORAGE_ACCOUNT', value: storageAccount.name }
             { name: 'AZURE_STORAGE_ACCESS_KEY', secretRef: 'azure-storage-key' }
           ]

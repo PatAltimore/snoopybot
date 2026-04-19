@@ -19,21 +19,12 @@ param containerRegistryUsername string
 @secure()
 param containerRegistryPassword string
 
-@description('Twitter/X API consumer key.')
-@secure()
-param twitterConsumerKey string
+@description('Mastodon instance URL (e.g. https://mastodon.social).')
+param mastodonServer string
 
-@description('Twitter/X API consumer secret.')
+@description('Mastodon access token with write:statuses scope.')
 @secure()
-param twitterConsumerSecret string
-
-@description('Twitter/X API access token.')
-@secure()
-param twitterAccessToken string
-
-@description('Twitter/X API access token secret.')
-@secure()
-param twitterAccessTokenSecret string
+param mastodonAccessToken string
 
 // ── Naming ────────────────────────────────────────────────────────────────────
 var tags = { 'azd-env-name': environmentName }
@@ -59,10 +50,8 @@ module resources './resources.bicep' = {
     containerRegistryLoginServer: containerRegistryLoginServer
     containerRegistryUsername: containerRegistryUsername
     containerRegistryPassword: containerRegistryPassword
-    twitterConsumerKey: twitterConsumerKey
-    twitterConsumerSecret: twitterConsumerSecret
-    twitterAccessToken: twitterAccessToken
-    twitterAccessTokenSecret: twitterAccessTokenSecret
+    mastodonServer: mastodonServer
+    mastodonAccessToken: mastodonAccessToken
   }
 }
 

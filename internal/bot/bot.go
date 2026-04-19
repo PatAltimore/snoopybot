@@ -6,18 +6,16 @@ import (
 	"math/rand"
 	"os"
 
+	"github.com/PatAltimore/snoopybot/internal/mastodon"
 	"github.com/PatAltimore/snoopybot/internal/storage"
-	"github.com/PatAltimore/snoopybot/internal/twitter"
 )
 
 func DoWork() error {
 	ctx := context.Background()
 
-	twitterClient := &twitter.Client{
-		ConsumerKey:    os.Getenv("TWITTER_CONSUMER_KEY"),
-		ConsumerSecret: os.Getenv("TWITTER_CONSUMER_SECRET"),
-		AccessToken:    os.Getenv("TWITTER_ACCESS_TOKEN"),
-		AccessSecret:   os.Getenv("TWITTER_ACCESS_TOKEN_SECRET"),
+	mastodonClient := &mastodon.Client{
+		Server:      os.Getenv("MASTODON_SERVER"),
+		AccessToken: os.Getenv("MASTODON_ACCESS_TOKEN"),
 	}
 
 	stateClient, err := storage.NewStateClient(
@@ -41,22 +39,22 @@ func DoWork() error {
 		if err := stateClient.SetNovelIndex(ctx, index); err != nil {
 			return err
 		}
-		log.Printf("Tweeting novel index: %d", index)
-		return sendTweet(ctx, twitterClient, novel[index], dryRun)
+		log.Printf("Posting novel index: %d", index)
+		return postStatus(ctx, mastodonClient, novel[index], dryRun)
 
 	case 1:
 		phrase := rand.Intn(len(misc))
-		log.Printf("Tweeting miscellaneous quote index: %d", phrase)
-		return sendTweet(ctx, twitterClient, misc[phrase], dryRun)
+		log.Printf("Posting miscellaneous quote index: %d", phrase)
+		return postStatus(ctx, mastodonClient, misc[phrase], dryRun)
 	}
 	return nil
 }
 
-func sendTweet(ctx context.Context, c *twitter.Client, text string, dryRun bool) error {
-	log.Printf("Tweet: %s", text)
+func postStatus(ctx context.Context, c *mastodon.Client, text string, dryRun bool) error {
+	log.Printf("Status: %s", text)
 	if dryRun {
-		log.Println("DRY_RUN=true, skipping actual tweet")
+		log.Println("DRY_RUN=true, skipping actual post")
 		return nil
 	}
-	return c.PostTweet(ctx, text)
+	return c.PostStatus(ctx, text)
 }
