@@ -1,6 +1,8 @@
 using './main.bicep'
 
-// azd sets AZURE_ENV_NAME and AZURE_LOCATION automatically.
+// `environmentName` and `location` are injected automatically by azd — no entry needed here.
+// azd will prompt for `location` once on first provision and remember it.
+//
 // All other variables must be set before running `azd provision`:
 //
 //   azd env set AZURE_CONTAINER_REGISTRY_LOGIN_SERVER  <registry>.azurecr.io
@@ -10,9 +12,6 @@ using './main.bicep'
 //   azd env set TWITTER_CONSUMER_SECRET                <value>
 //   azd env set TWITTER_ACCESS_TOKEN                   <value>
 //   azd env set TWITTER_ACCESS_TOKEN_SECRET            <value>
-
-param environmentName = readEnvironmentVariable('AZURE_ENV_NAME', 'dev')
-param location       = readEnvironmentVariable('AZURE_LOCATION', 'eastus')
 
 param containerRegistryLoginServer = readEnvironmentVariable('AZURE_CONTAINER_REGISTRY_LOGIN_SERVER')
 param containerRegistryUsername    = readEnvironmentVariable('AZURE_CONTAINER_REGISTRY_USERNAME')

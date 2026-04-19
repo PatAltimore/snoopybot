@@ -5,9 +5,13 @@ import (
 	"os"
 
 	"github.com/PatAltimore/snoopybot/internal/bot"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env if present. Silently ignored in production where no .env exists.
+	_ = godotenv.Load()
+
 	required := []string{
 		"TWITTER_CONSUMER_KEY",
 		"TWITTER_CONSUMER_SECRET",
