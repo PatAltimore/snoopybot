@@ -10,10 +10,9 @@ import (
 
 	"github.com/PatAltimore/snoopybot/internal/mastodon"
 	"github.com/PatAltimore/snoopybot/internal/storage"
-	// "github.com/PatAltimore/snoopybot/internal/threads" // re-enable to post to Threads
 )
 
-// poster is satisfied by any platform client (Mastodon, Threads, etc.)
+// poster is satisfied by any platform client.
 type poster interface {
 	PostStatus(ctx context.Context, text string) error
 	Name() string
@@ -23,7 +22,6 @@ func DoWork() error {
 	ctx := context.Background()
 	dryRun := os.Getenv("DRY_RUN") == "true"
 
-	// Build the list of configured platforms — any combination is valid.
 	var posters []poster
 	if server := os.Getenv("MASTODON_SERVER"); server != "" {
 		posters = append(posters, &mastodon.Client{
@@ -31,15 +29,7 @@ func DoWork() error {
 			AccessToken: os.Getenv("MASTODON_ACCESS_TOKEN"),
 		})
 	}
-	// Threads — uncomment to re-enable:
-	// if userID := os.Getenv("THREADS_USER_ID"); userID != "" {
-	// 	posters = append(posters, &threads.Client{
-	// 		UserID:      userID,
-	// 		AccessToken: os.Getenv("THREADS_ACCESS_TOKEN"),
-	// 	})
-	// }
 
-	// Select content
 	stateClient, err := storage.NewStateClient(
 		os.Getenv("AZURE_STORAGE_ACCOUNT"),
 		os.Getenv("AZURE_STORAGE_ACCESS_KEY"),
@@ -69,7 +59,6 @@ func DoWork() error {
 
 	log.Printf("Status: %s", text)
 
-	// Post to every configured platform; collect all errors.
 	var errs []error
 	for _, p := range posters {
 		if dryRun {

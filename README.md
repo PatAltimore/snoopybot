@@ -1,6 +1,6 @@
 # snoopybot
 
-Bot that posts lines from Snoopy's novel and other writings from the Peanuts comic strip to Mastodon, Threads, or both. Runs as an Azure Container Apps Job on a daily schedule.
+Mastodon bot that posts lines from Snoopy's novel and other writings from the Peanuts comic strip. Runs as an Azure Container Apps Job on a daily schedule.
 
 ## Prerequisites
 
@@ -8,37 +8,21 @@ Bot that posts lines from Snoopy's novel and other writings from the Peanuts com
 - [Azure Developer CLI (azd)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)
 - [Docker](https://www.docker.com/products/docker-desktop/) (for building the container image)
 - An existing [Azure Container Registry](https://learn.microsoft.com/azure/container-registry/)
-- A Mastodon account and/or Threads account (at least one required)
+- A Mastodon account and access token
 
 ## Local development
 
-Fill in your credentials in `.env`. At least one posting platform must be configured.
-
-**Mastodon** (optional):
+Fill in your credentials in `.env`:
 
 | Variable | Description |
 |---|---|
 | `MASTODON_SERVER` | Your Mastodon instance URL (e.g. `https://mastodon.social`) |
 | `MASTODON_ACCESS_TOKEN` | Access token with `write:statuses` scope |
-
-To get a Mastodon access token: go to your instance → **Preferences** → **Development** → **New Application** → enable `write:statuses` → copy the access token.
-
-**Threads** (optional):
-
-| Variable | Description |
-|---|---|
-| `THREADS_USER_ID` | Your Threads user ID |
-| `THREADS_ACCESS_TOKEN` | Long-lived access token with `threads_content_publish` scope |
-
-To get Threads credentials: go to the [Meta developer portal](https://developers.facebook.com) → create an app → add the Threads product → generate a long-lived access token. Your user ID is available from `GET https://graph.threads.net/v1.0/me?access_token=<token>`.
-
-**Always required**:
-
-| Variable | Description |
-|---|---|
 | `AZURE_STORAGE_ACCOUNT` | Azure Storage account name |
 | `AZURE_STORAGE_ACCESS_KEY` | Azure Storage account key |
 | `DRY_RUN` | Set to `true` to print the post without sending it |
+
+To get a Mastodon access token: go to your instance → **Preferences** → **Development** → **New Application** → enable `write:statuses` → copy the access token.
 
 Run locally (dry run by default):
 
@@ -46,7 +30,7 @@ Run locally (dry run by default):
 go run .
 ```
 
-To fire a real post, set `DRY_RUN=false` in `.env` before running. Both platforms post the same content simultaneously if both are configured.
+To fire a real post, set `DRY_RUN=false` in `.env` before running.
 
 ## Project structure
 
@@ -58,8 +42,6 @@ internal/
     bot.go                         # DoWork(): coin flip, post novel or misc quote
   mastodon/
     client.go                      # Mastodon API client (POST /api/v1/statuses)
-  threads/
-    client.go                      # Threads API client (two-step container + publish)
   storage/
     state.go                       # Azure Tables: tracks current novel line index
 Dockerfile                         # Multi-stage build → scratch-based image (~8 MB)
@@ -90,12 +72,9 @@ azd env set AZURE_CONTAINER_REGISTRY_LOGIN_SERVER  <registry>.azurecr.io
 azd env set AZURE_CONTAINER_REGISTRY_USERNAME      <acr-admin-username>
 azd env set AZURE_CONTAINER_REGISTRY_PASSWORD      <acr-admin-password>
 
-# Platform credentials — set one or both
+# Mastodon credentials
 azd env set MASTODON_SERVER        https://mastodon.social
 azd env set MASTODON_ACCESS_TOKEN  <value>
-
-azd env set THREADS_USER_ID        <value>
-azd env set THREADS_ACCESS_TOKEN   <value>
 ```
 
 > ACR admin credentials are found in the Azure Portal under your registry → **Access keys**. Enable the admin user if it is not already on.
@@ -164,9 +143,6 @@ GitHub push → Actions workflow → docker build → ACR → Container Apps Job
                                             Azure Table Storage
                                             (tracks novel index)
                                                     │
-                                       ┌─────────────────────┐
-                                       │  Mastodon API v1    │
-                                       │  Threads API v1.0   │
-                                       │  (any/all enabled)  │
-                                       └─────────────────────┘
+                                             Mastodon API v1
+                                              (posts status)
 ```
